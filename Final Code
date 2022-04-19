@@ -1,0 +1,288 @@
+#open a serial port in python and send a message down it
+
+import serial
+import mysql.connector
+import asyncio
+import time
+from datetime import datetime
+import serial.tools.list_ports
+import math
+import json
+
+
+
+
+port_name = "/dev/ttyUSB2"
+port = serial.Serial(port_name, baudrate=9600, timeout=5)
+print(port)
+# 
+# 
+# print (port)
+#port.write(b'Hi, this is a test message from the Comms Section 1 radio: Radio: "Zach"')     # write a string
+
+
+# Trying out an async function to constantly send messages to test for signal connection -------------------------
+
+def testing():
+        message = ("...")
+        port.write(message)
+        print(message)
+        
+
+             
+# Asyncrounous listening loop----------------------
+
+def listening():
+        message = port.readline(10)
+        print(message)
+   #     print (".")
+        
+
+    
+
+# Sending a Data File------------------------------
+
+# Data = open (r"TextFile1.txt", "r")
+# print (Data.read())
+# port.write(open(r"TextFile1.txt","rb").read())
+# Data.close()
+
+# Accessing the Database---------------------------
+
+
+def accessing_database():
+    Section1DAQ = mysql.connector.connect(
+      host="localhost",
+      user="JMUWAM",
+      password="rockcity",
+      database="Section1DAQ",
+      
+    )
+
+    print(Section1DAQ)
+
+    mycursor = Section1DAQ.cursor()
+
+    mycursor.execute("SHOW DATABASES")
+    databases = mycursor.fetchall()
+
+    for database in databases:
+        print(database)
+        
+    mycursor.execute("SHOW TABLES")
+
+    tables = mycursor.fetchall()
+
+    for table in tables:
+        print(table)
+    #----------------------------------------------
+    
+    return Section1DAQ
+
+def get_gps_data(Section1DAQ):
+    
+    try:
+        
+        mycursor = Section1DAQ.cursor()
+        mycursor.execute("SELECT * FROM GPS")
+        GPS_data = mycursor.fetchall()
+        unsent_entries = ("SELECT * FROM Temp WHERE Sent = '0'")
+        mycursor.execute (unsent_entries)
+        number_to_be_sent = mycursor.fetchall()
+
+        for row in GPS_data:
+            print (GPS_data)
+            uid = row[0]
+            lat = row[1]
+            lon = row[2]
+            time = row[3]
+            if_sent = row[4]
+        
+        print (GPS_data)
+        return GPS_data
+        GPS_Marker_True = 0
+        return Temp_Marker_True
+    except:
+        GPS_Marker_True = 1
+        port.write(b'\nNo Data to be sent')
+        return GPS_Marker_True
+    #--------------------------------------------------------
+    
+def get_RFID_data(Section1DAQ):
+    mycursor = Section1DAQ.cursor()
+#     mycursor.execute("SELECT * FROM RFID")
+#     RFID_data = mycursor.fetchall()
+    unsent_entries_RFID = ("SELECT * FROM RFID WHERE Sent = '0'")
+    mycursor.execute (unsent_entries_RFID)
+    unsent_entries_RFID = mycursor.fetchall()
+#     for row in RFID_data:
+#         print (RFID_data)
+#         uid = row[0]
+#         lat = row[1]
+#         lon = row[2]
+#         time = row[3]
+#             #if_sent = row[4]
+            
+    print (unsent_entries_RFID)
+    return unsent_entries_RFID
+       
+   
+        
+    #-------------------------------------------------------
+def get_temp_data(Section1DAQ):
+    try:
+        
+        mycursor = Section1DAQ.cursor()
+        mycursor.execute("SELECT * FROM Temp")
+        Temp_data = mycursor.fetchall()
+        unsent_entries_Temp = ("SELECT * FROM Temp WHERE Sent = '0'")
+        mycursor.execute (unsent_entries_Temp)
+        number_to_be_sent_Temp = mycursor.fetchall()
+        return number_to_be_sent_Temp
+        
+        for x in unsent_entries_Temp:
+            print (x)
+
+        for row in unsent_entries_Temp:
+            print (rows2)
+            uid = row[0]
+            lat = row[1]
+            lon = row[2]
+            time = row[3]
+            #if_sent = row[4]
+        print(unsent_entries_Temp)
+        Temp_Marker_True = 0
+        return Temp_Marker_True
+    except:
+        Temp_Marker_True = 1
+        return Temp_Marker_True
+#-------------------------------------------------------    
+def sending_data_GPS(Section1DAQ, unsent_entries_GPS):
+    message = (str(list(unsent_entries_GPS)))
+    data_to_be_sent = bytes(message, 'utf-8')
+    port.write(data_to_be_sent)
+  
+    
+def sending_data_Temp(Section1DAQ, number_to_be_sent_Temp):
+    
+    message_temp = (str(list(number_to_be_sent_Temp)))
+    data_to_be_sent_temp = bytes(message_temp, 'utf-8')
+    port.write(data_to_be_sent_temp)
+  
+    
+def sending_data_RFID(unsent_entries_RFID):
+    message_RFID = (str(list(unsent_entries_RFID)))
+    data_to_be_sent_RFID = bytes(message_RFID, 'utf-8')
+    port.write(data_to_be_sent_RFID)
+    
+#        port.write(b'\nNo new RFIDget_RFID_data(RFID_Handle) data yet')
+
+#--------------------------------------------------------------------------     
+def mark_sent_gps_data(Section1DAQ):
+    mycursor = Section1DAQ.cursor()
+    unsent_entries_GPS = ("SELECT * FROM GPS WHERE Sent = '0'")
+    mycursor.execute (unsent_entries_GPS)
+    unsent_entries_GPS = mycursor.fetchall()
+    unsent_entries_GPS = "UPDATE GPS SET Sent = 1 WHERE Sent = 0"
+    mycursor.execute(unsent_entries_GPS)
+    Section1DAQ.commit()
+    return unsent_entries_GPS
+
+#--------------------------------------------------------------------------
+def mark_sent_RFID_data(Section1DAQ):  #Might work, needs testing
+    mycursor = Section1DAQ.cursor()
+    unsent_entries_RFID = ("SELECT * FROM RFID WHERE Sent = '0'")
+    mycursor.execute (unsent_entries_RFID)
+    unsent_entries_RFID = mycursor.fetchall()
+    unsent_entries_RFID = "UPDATE RFID SET Sent = 1 WHERE Sent = 0"
+    mycursor.execute(unsent_entries_RFID)
+    Section1DAQ.commit()
+    return unsent_entries_RFID
+
+
+
+#--------------------------------------------------------------------------
+def mark_sent_temp_data(Section1DAQ):
+    mycursor = Section1DAQ.cursor()
+    unsent_entries_Temp = ("SELECT * FROM Temp WHERE Sent = '0'")
+    mycursor.execute (unsent_entries_Temp)
+    number_to_be_sent_Temp = mycursor.fetchall()
+    entries_to_be_marked_Temp = "UPDATE Temp SET Sent = 1 WHERE Sent = 0"
+    mycursor.execute(entries_to_be_marked_Temp)
+    Section1DAQ.commit()
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+#-------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+internal_time = datetime.now()
+
+time_of_last_report_temp = math.trunc(datetime.timestamp(internal_time))
+time_of_last_report_GPS = math.trunc(datetime.timestamp(internal_time))
+time_of_last_report_RFID = math.trunc(datetime.timestamp(internal_time))
+print('The starting time is: ' , time_of_last_report_temp)
+Section1DAQ = accessing_database()
+database_handle = accessing_database()
+GPS_Handle = get_gps_data(Section1DAQ)
+gps_data = get_gps_data(Section1DAQ)
+Temp_Handle = get_temp_data(Section1DAQ)
+temp_data = get_temp_data(Section1DAQ)
+RFID_Handle = get_RFID_data(Section1DAQ)
+#RFID_data = get_RFID_data(Section1DAQ)
+Temp_Marker_True = get_temp_data(Section1DAQ)
+GPS_Marker_True = get_gps_data(Section1DAQ)
+RFID_Marker_True = get_RFID_data(Section1DAQ)
+#---------------------------------get_RFID_data(RFID_Handle)-----------------------------------------  
+while True:
+    time_Current_temp = datetime.now()
+    Current_Time_temp = math.trunc(datetime.timestamp(time_Current_temp))
+    if Current_Time_temp - time_of_last_report_temp >= 10:
+        print('20 seconds have passed')
+        print('The current time is: ' , Current_Time_temp)
+        time_of_last_report_temp = Current_Time_temp
+        get_temp_data(database_handle)
+        sending_data_Temp(Temp_Handle, temp_data)
+        mark_sent_temp_data(database_handle)
+        port.close
+        
+#     testing()
+# 
+#     listening()
+
+
+    time_Current_GPS = datetime.now()
+    Current_Time_GPS = math.trunc(datetime.timestamp(time_Current_GPS))
+    if Current_Time_GPS - time_of_last_report_GPS >= 10:
+        print('10 seconds have passed')
+        print('The current time is: ' , Current_Time_GPS)
+        time_of_last_report_GPS = Current_Time_GPS
+        get_gps_data(database_handle)
+        sending_data_GPS(GPS_Handle, gps_data)
+        mark_sent_gps_data(database_handle)
+
+
+    time_Current_RFID = datetime.now()
+    Current_Time_RFID = math.trunc(datetime.timestamp(time_Current_RFID))
+    if Current_Time_RFID - time_of_last_report_RFID >= 5:
+        port.write(b'\n5 seconds have passed')
+        print('The current time is: ' , Current_Time_RFID)
+        time_of_last_report_RFID = Current_Time_RFID
+        get_RFID_data(database_handle)
+        sending_data_RFID(RFID_Handle)
+        port.write(b'\n\n------')
+        mark_sent_RFID_data(database_handle)
+
+
+
+
+#     Send to a particular radio (Homebase)
